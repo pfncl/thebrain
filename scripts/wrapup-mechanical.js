@@ -16,7 +16,7 @@ function runStep(label, scriptPath) {
   if (!fs.existsSync(scriptPath)) return;
   console.log(label);
   try {
-    execFileSync('node', [scriptPath], { stdio: 'inherit' });
+    execFileSync('node', [scriptPath], { stdio: 'inherit', cwd: THEBRAIN_DIR });
   } catch (err) {
     console.error(`  Warning: ${path.basename(scriptPath)} failed: ${err.message}`);
   }
