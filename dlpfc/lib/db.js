@@ -93,10 +93,17 @@ class WorkingMemoryDB {
   }
 
   // Decay all scores by a factor (e.g., 0.8)
-  decayAllScores(factor) {
-    this.db.prepare(
-      'UPDATE file_heat SET score = score * ?, updated_at = CURRENT_TIMESTAMP'
-    ).run(factor);
+  // If excludeSession is provided, files touched in that session are not decayed
+  decayAllScores(factor, excludeSession) {
+    if (excludeSession) {
+      this.db.prepare(
+        'UPDATE file_heat SET score = score * ?, updated_at = CURRENT_TIMESTAMP WHERE last_session != ?'
+      ).run(factor, excludeSession);
+    } else {
+      this.db.prepare(
+        'UPDATE file_heat SET score = score * ?, updated_at = CURRENT_TIMESTAMP'
+      ).run(factor);
+    }
   }
 
   // Get list of projects that have files above threshold

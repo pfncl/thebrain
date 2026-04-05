@@ -32,8 +32,9 @@ function bumpFile(db, project, filePath, touchType, sessionId, dirData) {
 }
 
 // Decay all scores and detect clusters from session co-occurrence
+// Files from the current session are excluded from decay
 function decayAndCluster(db, sessionId) {
-  db.decayAllScores(DECAY_FACTOR);
+  db.decayAllScores(DECAY_FACTOR, sessionId);
 
   const grouped = getSessionFiles(db, sessionId);
   for (const [project, files] of Object.entries(grouped)) {
