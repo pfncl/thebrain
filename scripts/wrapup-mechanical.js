@@ -22,7 +22,43 @@ function runStep(label, scriptPath) {
   }
 }
 
+function ensureDeps() {
+  const nm = path.join(THEBRAIN_DIR, 'node_modules', 'better-sqlite3');
+  if (!fs.existsSync(nm)) {
+    console.log('Installing dependencies...');
+    execFileSync('npm', ['install', '--no-audit', '--no-fund'], { stdio: 'inherit', cwd: THEBRAIN_DIR });
+  }
+}
+
+function runCleanup() {
+  const claudeDir = path.join(HOME, '.claude');
+  const now = Date.now();
+  try {
+    for (const f of fs.readdirSync(claudeDir)) {
+      if (f.startsWith('git_briefing_state_') && f.endsWith('.json')) {
+        const fp = path.join(claudeDir, f);
+        try {
+          const stat = fs.statSync(fp);
+          if (now - stat.mtimeMs > 86400000) fs.unlinkSync(fp);
+        } catch {}
+      }
+    }
+  } catch {}
+}
+
+function updateSizeMarker() {
+  try {
+    const size = fs.existsSync(PFC_CORTEX) ? fs.statSync(PFC_CORTEX).size : 0;
+    fs.writeFileSync(PFC_SIZE_FILE, String(size));
+    console.log(`Done. Size marker: ${size} bytes`);
+  } catch (err) {
+    console.error(`Warning: PFC size marker update failed: ${err.message}`);
+  }
+}
+
 function main() {
+  ensureDeps();
+
   // 0a. Re-scan hippocampus DIR files
   runStep('Scanning hippocampus...', path.join(THEBRAIN_DIR, 'hippocampus', 'scripts', 'scan.js'));
 
@@ -43,32 +79,10 @@ function main() {
   runStep('Regenerating prefrontal...', path.join(THEBRAIN_DIR, 'scripts', 'generate-prefrontal.js'));
 
   // 3. Clean up stale git briefing state files (older than 24 hours)
-  const claudeDir = path.join(HOME, '.claude');
-  const now = Date.now();
-  try {
-    for (const f of fs.readdirSync(claudeDir)) {
-      if (f.startsWith('git_briefing_state_') && f.endsWith('.json')) {
-        const fp = path.join(claudeDir, f);
-        try {
-          const stat = fs.statSync(fp);
-          if (now - stat.mtimeMs > 86400000) fs.unlinkSync(fp);
-        } catch {}
-      }
-    }
-  } catch {}
+  runCleanup();
 
   // 4. Update PFC size marker
-  try {
-    if (fs.existsSync(PFC_CORTEX)) {
-      const size = fs.statSync(PFC_CORTEX).size;
-      fs.writeFileSync(PFC_SIZE_FILE, String(size));
-    } else {
-      fs.writeFileSync(PFC_SIZE_FILE, '0');
-    }
-    console.log(`Done. Size marker: ${fs.readFileSync(PFC_SIZE_FILE, 'utf-8').trim()} bytes`);
-  } catch (err) {
-    console.error(`Warning: PFC size marker update failed: ${err.message}`);
-  }
+  updateSizeMarker();
 }
 
 main();
