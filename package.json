@@ -5,6 +5,7 @@
   "private": true,
   "engines": { "node": ">=18.0.0" },
   "dependencies": {
+    "acorn": "^8.16.0",
     "better-sqlite3": "^12.6.2"
   },
   "scripts": {

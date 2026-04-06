@@ -65,12 +65,33 @@ function main() {
   // 0b. Incremental term index scan
   runStep('Updating term index...', path.join(THEBRAIN_DIR, 'hippocampus', 'scripts', 'term-scan-cli.js'));
 
+  // 0b-flow. Flow graph scan + cross-project resolution
+  const flowScanPath = path.join(THEBRAIN_DIR, 'hippocampus', 'scripts', 'flow-scan.js');
+  const flowResolvePath = path.join(THEBRAIN_DIR, 'hippocampus', 'scripts', 'flow-resolve.js');
+  if (fs.existsSync(flowScanPath)) {
+    runStep('Scanning flow graph...', flowScanPath);
+  }
+  if (fs.existsSync(flowResolvePath)) {
+    console.log('Resolving cross-project references...');
+    try {
+      execFileSync('node', [flowResolvePath], { stdio: 'inherit', timeout: 30000 });
+    } catch (err) {
+      console.error(`  Warning: flow-resolve failed: ${err.message}`);
+    }
+  }
+
   // 0c. CC2 window scan + metadata extraction
   runStep('Scanning CC2 windows...', path.join(THEBRAIN_DIR, 'cerebral-cortex-v2', 'scripts', 'scan.js'));
   runStep('Extracting CC2 metadata...', path.join(THEBRAIN_DIR, 'cerebral-cortex-v2', 'scripts', 'extract.js'));
 
   // 0d. dlPFC working memory — decay, reconcile references, generate output
   runStep('Updating working memory (dlPFC)...', path.join(THEBRAIN_DIR, 'dlpfc', 'scripts', 'wrapup-step.js'));
+
+  // 0e. One-time PFC summary recovery (backfills lost summaries into CC2)
+  const pfcRecoveryFlag = path.join(BRAIN_DIR, '.pfc-recovery-done');
+  if (!fs.existsSync(pfcRecoveryFlag)) {
+    runStep('Recovering PFC summaries...', path.join(THEBRAIN_DIR, 'scripts', 'migrate-pfc-summaries.js'));
+  }
 
   // 1. Trim PFC entries and migrate overflow to CC2 recall.db
   runStep('Trimming PFC...', path.join(THEBRAIN_DIR, 'cerebral-cortex-v2', 'scripts', 'pfc-trim.js'));

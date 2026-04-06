@@ -37,24 +37,61 @@ function outputJson(content) {
 }
 
 // Write resolved tool-index to ~/.claude/rules/ if source is newer or dest missing
+function buildRulesHeader() {
+  // Plugin root — always present so slash commands can resolve $PLUGIN_ROOT
+  var lines = [`<!-- PLUGIN_ROOT: ${PLUGIN_ROOT} -->`];
+
+  // One-time migration notices — appear until their flag file exists
+  var pfcRecoveryFlag = path.join(BRAIN_DIR, '.pfc-recovery-done');
+  if (!fs.existsSync(pfcRecoveryFlag)) {
+    var migrationScript = path.join(PLUGIN_ROOT, 'scripts', 'migrate-pfc-summaries.js');
+    lines.push('');
+    lines.push('**MANDATORY — RUN BEFORE ANY OTHER WORK:** Execute this command now:');
+    lines.push('```');
+    lines.push('node ' + migrationScript);
+    lines.push('```');
+    lines.push('This is a one-time migration that recovers lost session summaries. It will not appear again after completion.');
+  }
+
+  return lines.join('\n') + '\n\n';
+}
+
 function syncToolIndex() {
   if (!fs.existsSync(TOOL_INDEX_SRC)) return;
   try {
     const destDir = path.dirname(TOOL_INDEX_DEST);
     if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
 
-    let shouldWrite = !fs.existsSync(TOOL_INDEX_DEST);
-    if (!shouldWrite) {
-      const srcMtime = fs.statSync(TOOL_INDEX_SRC).mtimeMs;
-      const destMtime = fs.statSync(TOOL_INDEX_DEST).mtimeMs;
-      shouldWrite = srcMtime > destMtime;
-    }
-    if (!shouldWrite) return;
+    // Build the current header (plugin root + any pending migrations)
+    var header = buildRulesHeader();
 
-    // Read source and resolve $PLUGIN_ROOT placeholders
-    let content = fs.readFileSync(TOOL_INDEX_SRC, 'utf-8');
-    content = content.replace(/\$PLUGIN_ROOT/g, PLUGIN_ROOT);
-    fs.writeFileSync(TOOL_INDEX_DEST, content);
+    // Check if body needs rewriting (source changed or plugin root moved)
+    var bodyNeedsRewrite = !fs.existsSync(TOOL_INDEX_DEST);
+    var existingContent = '';
+    if (!bodyNeedsRewrite) {
+      existingContent = fs.readFileSync(TOOL_INDEX_DEST, 'utf-8');
+      var rootMatch = existingContent.match(/<!-- PLUGIN_ROOT: (.+?) -->/);
+      if (!rootMatch || rootMatch[1] !== PLUGIN_ROOT) {
+        bodyNeedsRewrite = true;
+      } else {
+        var srcMtime = fs.statSync(TOOL_INDEX_SRC).mtimeMs;
+        var destMtime = fs.statSync(TOOL_INDEX_DEST).mtimeMs;
+        if (srcMtime > destMtime) bodyNeedsRewrite = true;
+      }
+    }
+
+    if (bodyNeedsRewrite) {
+      // Full rewrite — resolve $PLUGIN_ROOT placeholders in source
+      var content = fs.readFileSync(TOOL_INDEX_SRC, 'utf-8');
+      content = content.replace(/\$PLUGIN_ROOT/g, PLUGIN_ROOT);
+      fs.writeFileSync(TOOL_INDEX_DEST, header + content);
+    } else {
+      // Check if header block changed (migration completed or new migration)
+      var bodyStart = existingContent.indexOf('# Brain Tools');
+      if (bodyStart === -1) bodyStart = existingContent.indexOf('<!--', 1);
+      var body = bodyStart > 0 ? existingContent.slice(bodyStart) : existingContent;
+      fs.writeFileSync(TOOL_INDEX_DEST, header + body);
+    }
   } catch (err) {
     process.stderr.write(`TheBrain: tool-index sync to rules failed — ${err.message}\n`);
   }
