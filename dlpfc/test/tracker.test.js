@@ -79,13 +79,25 @@ describe('bumpFile', () => {
 describe('decayAndCluster', () => {
   after(cleanup);
 
-  it('decays all scores by 0.8', () => {
+  it('decays all scores by 0.8 (excludes current session)', () => {
     const db = freshDb();
     db.bumpFileHeat('proj', 'a.js', 5.0, 's1');
     db.bumpFileHeat('proj', 'b.js', 2.0, 's1');
-    decayAndCluster(db, 's1');
+    // Decay with a different session — s1 files should decay
+    decayAndCluster(db, 's2');
     assert.ok(Math.abs(db.getFileHeat('proj', 'a.js').score - 4.0) < 0.01);
     assert.ok(Math.abs(db.getFileHeat('proj', 'b.js').score - 1.6) < 0.01);
+    db.close();
+  });
+
+  it('does not decay files from current session', () => {
+    const db = freshDb();
+    db.bumpFileHeat('proj', 'a.js', 5.0, 's1');
+    db.bumpFileHeat('proj', 'b.js', 2.0, 's1');
+    // Decay with same session — s1 files should NOT decay
+    decayAndCluster(db, 's1');
+    assert.ok(Math.abs(db.getFileHeat('proj', 'a.js').score - 5.0) < 0.01);
+    assert.ok(Math.abs(db.getFileHeat('proj', 'b.js').score - 2.0) < 0.01);
     db.close();
   });
 

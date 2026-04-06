@@ -438,6 +438,26 @@ This is what `/wrapup` calls after Claude writes the PFC entry.
 
 ---
 
+## Upstream Sync
+
+This repo is a customized clone of [Advenire-Consulting/thebrain](https://github.com/Advenire-Consulting/thebrain). To check for upstream changes:
+
+```bash
+git fetch upstream
+git log main..upstream/main --oneline   # what's new
+git diff main...upstream/main           # full diff
+```
+
+When merging, keep our customizations in:
+- `hippocampus/scripts/scan.js` — `NESTED_PARENTS`, `NAME_OVERRIDES` (SonderPlugins paths)
+- `hippocampus/scripts/term-scan-cli.js` — `WEBSITES_DIR`, `PROJECTS` list
+- `hippocampus/scripts/flow-scan.js` — `WEBSITES_DIR`, `PROJECTS` list
+- `dlpfc/lib/db.js` — `excludeSession` parameter in `decayAllScores`
+- `dlpfc/lib/tracker.js` — passes `sessionId` to decay
+- `scripts/wrapup-mechanical.js` — `ensureDeps()`, `cwd: THEBRAIN_DIR` in `runStep`
+
+---
+
 ## Uninstall
 
 Plugin uninstall only removes the plugin registration — it does **not** delete your brain data.

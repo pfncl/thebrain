@@ -96,6 +96,15 @@ function ensureSchema(db) {
 
     INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', '1');
   `);
+
+  // Run pending migrations (e.g., 002-add-summary)
+  try {
+    const { migrate } = require(path.join(__dirname, '..', 'lib', 'migrator'));
+    const migrationsDir = path.join(__dirname, '..', 'migrations', 'signals');
+    migrate(db, migrationsDir, { quiet: true });
+  } catch (err) {
+    // migrator not available — skip silently
+  }
 }
 
 function insertLesson(db, brainFile, domain, title, entryText, severity, weightOverride, summary) {

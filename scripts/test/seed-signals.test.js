@@ -32,7 +32,7 @@ describe('seed-signals', () => {
     assert.strictEqual(lessonCount, 10);
     assert.strictEqual(forceCount, 4);
     const version = db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get();
-    assert.strictEqual(version.value, '1');
+    assert.ok(Number(version.value) >= 1, 'schema_version should be at least 1');
     db.close();
   });
 
