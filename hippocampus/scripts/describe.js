@@ -51,14 +51,9 @@ if (!dir.files || typeof dir.files !== 'object') {
 }
 
 if (!dir.files[filePath]) {
-  console.error('File not found in DIR: ' + filePath);
-  console.error('Available files (first 20):');
-  const keys = Object.keys(dir.files);
-  for (let i = 0; i < Math.min(20, keys.length); i++) {
-    console.error('  ' + keys[i]);
-  }
-  if (keys.length > 20) console.error('  ... and ' + (keys.length - 20) + ' more');
-  process.exit(1);
+  // File not in DIR yet — create a stub entry so describe doubles as an add command
+  dir.files[filePath] = { purpose: '' };
+  console.log('Added new entry: ' + filePath);
 }
 
 dir.files[filePath].description = description;
