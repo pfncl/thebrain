@@ -131,6 +131,30 @@ function computeTemporalProximity(chunkTimestampMs, anchorMs) {
   return Math.round(score * 100) / 100;
 }
 
+/**
+ * Match an absolute file path to a project from DIR entries.
+ * dir.root is relative to a parent dir (e.g. "pefen-stack/"), but the file path
+ * may be absolute or relative to cwd which is inside the project.
+ * We match by checking if dir.name appears as a path segment in the absolute path.
+ *
+ * Returns { project, dir, relativeToProject } or null.
+ */
+function matchProject(dirs, filePath) {
+  const absPath = path.resolve(filePath);
+  const segments = absPath.split(path.sep);
+
+  for (const dir of dirs) {
+    const dirName = dir.root.replace(/\/$/, ''); // "pefen-stack/" -> "pefen-stack"
+    const idx = segments.lastIndexOf(dirName);
+    if (idx !== -1) {
+      const projectRoot = segments.slice(0, idx + 1).join(path.sep);
+      const relativeToProject = path.relative(projectRoot, absPath);
+      return { project: dir.name, dir, projectRoot, relativeToProject };
+    }
+  }
+  return null;
+}
+
 module.exports = {
   loadAllDIR,
   resolveAlias,
@@ -138,5 +162,6 @@ module.exports = {
   getBlastRadius,
   getFileFreshness,
   computeTemporalProximity,
+  matchProject,
   DEFAULT_HIPPOCAMPUS_DIR,
 };

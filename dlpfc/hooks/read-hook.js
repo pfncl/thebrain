@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { loadAllDIR } = require('../../hippocampus/lib/dir-loader');
+const { loadAllDIR, matchProject } = require('../../hippocampus/lib/dir-loader');
 const { WorkingMemoryDB } = require('../lib/db');
 const { bumpFile } = require('../lib/tracker');
 
@@ -25,21 +25,12 @@ if (require.main === module) {
   if (!fs.existsSync(hippocampusDir)) process.exit(0);
 
   const dirs = loadAllDIR(hippocampusDir);
-  const relativeToCwd = path.relative(cwd, filePath);
+  const match = matchProject(dirs, filePath);
+  if (!match) process.exit(0);
 
-  let matchedProject = null;
-  let dirData = null;
-  for (const dir of dirs) {
-    if (relativeToCwd.startsWith(dir.root)) {
-      matchedProject = dir.name;
-      dirData = dir;
-      break;
-    }
-  }
-
-  if (!matchedProject) process.exit(0);
-
-  const relativeToProject = path.relative(path.join(cwd, dirData.root), filePath);
+  const matchedProject = match.project;
+  const dirData = match.dir;
+  const relativeToProject = match.relativeToProject;
 
   let db;
   try {
@@ -49,7 +40,7 @@ if (require.main === module) {
     if (reengagement) {
       const { checkGitChanges, hasBeenBriefed } = require('../lib/git-briefing');
       if (!hasBeenBriefed(sessionId, matchedProject, relativeToProject)) {
-        const projectRoot = path.join(cwd, dirData.root);
+        const projectRoot = match.projectRoot;
         const briefing = checkGitChanges(projectRoot, relativeToProject, reengagement.lastTouchedAt);
         if (briefing) {
           process.stderr.write('[git-briefing] ' + relativeToProject + ' changed while cold: ' + briefing + '\n');

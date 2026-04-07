@@ -455,6 +455,10 @@ When merging, keep our customizations in:
 - `dlpfc/lib/db.js` — `excludeSession` parameter in `decayAllScores`
 - `dlpfc/lib/tracker.js` — passes `sessionId` to decay
 - `scripts/wrapup-mechanical.js` — `ensureDeps()`, `cwd: THEBRAIN_DIR` in `runStep`
+- `hippocampus/lib/dir-loader.js` — `matchProject()` function (upstream bug fix for path matching)
+- `dlpfc/hooks/read-hook.js` — uses `matchProject()` instead of broken `relativeToCwd.startsWith(dir.root)`
+- `hooks/post-edit-hook.js` — uses `matchProject()` instead of broken `relativeToCwd.startsWith(dir.root)`
+- `dlpfc/scripts/wrapup-step.js` — uses `matchProject()` instead of broken `wf.file_path.startsWith(dir.root)`
 
 ---
 

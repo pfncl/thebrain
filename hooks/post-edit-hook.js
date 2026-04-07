@@ -7,7 +7,7 @@ const { TermDB } = require('../hippocampus/lib/term-db');
 const { scanSingleFile } = require('../hippocampus/lib/term-scanner');
 const { loadExtractors } = require('../hippocampus/lib/extractor-registry');
 const extractorRegistry = loadExtractors(path.join(__dirname, '../hippocampus/extractors'));
-const { loadAllDIR } = require('../hippocampus/lib/dir-loader');
+const { loadAllDIR, matchProject } = require('../hippocampus/lib/dir-loader');
 let WorkingMemoryDB, bumpFileDlpfc;
 try {
   WorkingMemoryDB = require('../dlpfc/lib/db').WorkingMemoryDB;
@@ -124,19 +124,11 @@ if (require.main === module) {
   const hippocampusDir = path.join(require('os').homedir(), '.claude/brain/hippocampus');
 
   const dirs = loadAllDIR(hippocampusDir);
-  const relativeToCwd = path.relative(cwd, filePath);
+  const match = matchProject(dirs, filePath);
+  if (!match) process.exit(0);
 
-  let matchedProject = null;
-  let projectDir = null;
-  for (const dir of dirs) {
-    if (relativeToCwd.startsWith(dir.root)) {
-      matchedProject = dir.name;
-      projectDir = path.join(cwd, dir.root);
-      break;
-    }
-  }
-
-  if (!matchedProject) process.exit(0);
+  const matchedProject = match.project;
+  const projectDir = match.projectRoot;
 
   const db = new TermDB();
   try { updateSingleFile(db, filePath, matchedProject, projectDir); }

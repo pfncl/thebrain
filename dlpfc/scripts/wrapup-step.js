@@ -7,7 +7,7 @@ const os = require('os');
 const { WorkingMemoryDB } = require('../lib/db');
 const { bumpFile, decayAndCluster } = require('../lib/tracker');
 const { writeToFile } = require('../lib/generator');
-const { loadAllDIR } = require('../../hippocampus/lib/dir-loader');
+const { loadAllDIR, matchProject } = require('../../hippocampus/lib/dir-loader');
 
 const BRAIN_DIR = path.join(os.homedir(), '.claude', 'brain');
 const HIPPOCAMPUS_DIR = path.join(BRAIN_DIR, 'hippocampus');
@@ -90,19 +90,9 @@ function reconcileFromCC2(db, sessionId) {
       if (existing && existing.last_session === sessionId) continue;
 
       // Resolve project
-      let matchedProject = null;
-      let relPath = wf.file_path;
-      for (const dir of dirs) {
-        if (wf.file_path.startsWith(dir.root)) {
-          matchedProject = dir.name;
-          relPath = wf.file_path.slice(dir.root.length);
-          if (relPath.startsWith('/')) relPath = relPath.slice(1);
-          break;
-        }
-      }
-
-      if (!matchedProject) continue;
-      bumpFile(db, matchedProject, relPath, 'reference', sessionId);
+      const match = matchProject(dirs, wf.file_path);
+      if (!match) continue;
+      bumpFile(db, match.project, match.relativeToProject, 'reference', sessionId);
     }
   } finally {
     recallDb.close();
@@ -110,15 +100,9 @@ function reconcileFromCC2(db, sessionId) {
 }
 
 function findExistingEntry(db, dirs, cc2FilePath) {
-  for (const dir of dirs) {
-    if (cc2FilePath.startsWith(dir.root)) {
-      let relPath = cc2FilePath.slice(dir.root.length);
-      if (relPath.startsWith('/')) relPath = relPath.slice(1);
-      const entry = db.getFileHeat(dir.name, relPath);
-      if (entry) return entry;
-    }
-  }
-  return null;
+  const match = matchProject(dirs, cc2FilePath);
+  if (!match) return null;
+  return db.getFileHeat(match.project, match.relativeToProject) || null;
 }
 
 if (require.main === module) main();
