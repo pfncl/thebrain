@@ -8,3 +8,4 @@ package-lock.json
 windows.json
 docs/benchmarks.md
 .vscode/settings.json
+hippocampus/test/.test-scan-project/
